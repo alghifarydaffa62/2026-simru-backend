@@ -3,3 +3,5 @@
 [Rr]elease/
 bin/
 obj/
+
+.env
