@@ -1,0 +1,6 @@
+@SimruBackend_HostAddress = http://localhost:5211
+
+GET {{SimruBackend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
