@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SimruBackend.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialSetup : Migration
+    public partial class InitialFinalSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -38,7 +38,8 @@ namespace SimruBackend.Migrations
                     RoomId = table.Column<int>(type: "int", nullable: false),
                     BorrowerName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     BorrowDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Purpose = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<int>(type: "int", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
@@ -63,8 +64,8 @@ namespace SimruBackend.Migrations
 
             migrationBuilder.InsertData(
                 table: "Reservations",
-                columns: new[] { "Id", "BorrowDate", "BorrowerName", "IsDeleted", "RoomId", "Status" },
-                values: new object[] { 1, new DateTime(2026, 2, 7, 9, 0, 0, 0, DateTimeKind.Unspecified), "Silia Julia", false, 1, "Active" });
+                columns: new[] { "Id", "BorrowDate", "BorrowerName", "IsDeleted", "Purpose", "RoomId", "Status" },
+                values: new object[] { 1, new DateTime(2026, 2, 7, 9, 0, 0, 0, DateTimeKind.Unspecified), "Silia Julia", false, "Kebutuhan ruangan himpunan sastra mesin", 1, 0 });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reservations_RoomId",

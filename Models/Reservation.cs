@@ -1,6 +1,12 @@
 using System.ComponentModel.DataAnnotations; 
 
 namespace SimruBackend.Models {
+    public enum ReservationStatus {
+        Pending = 0,
+        Approved = 1,
+        Rejected = 2
+    }
+
     public class Reservation {
         public int Id { get; set; }
 
@@ -14,7 +20,7 @@ namespace SimruBackend.Models {
         [Required]
         public DateTime BorrowDate { get; set; }
         public string Purpose { get; set; } = string.Empty;
-        public string Status { get; set; } = "Active";
+        public ReservationStatus Status { get; set; } 
         public bool IsDeleted { get; set; } = false;
     }
 }
