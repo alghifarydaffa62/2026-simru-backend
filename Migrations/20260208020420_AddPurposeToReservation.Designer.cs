@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SimruBackend.Data;
 
@@ -11,9 +12,11 @@ using SimruBackend.Data;
 namespace SimruBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260208020420_AddPurposeToReservation")]
+    partial class AddPurposeToReservation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,7 +67,7 @@ namespace SimruBackend.Migrations
                             BorrowDate = new DateTime(2026, 2, 7, 9, 0, 0, 0, DateTimeKind.Unspecified),
                             BorrowerName = "Silia Julia",
                             IsDeleted = false,
-                            Purpose = "Kebutuhan ruangan himpunan sastra mesin",
+                            Purpose = "",
                             RoomId = 1,
                             Status = "Active"
                         });

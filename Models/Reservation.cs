@@ -13,6 +13,7 @@ namespace SimruBackend.Models {
 
         [Required]
         public DateTime BorrowDate { get; set; }
+        public string Purpose { get; set; } = string.Empty;
         public string Status { get; set; } = "Active";
         public bool IsDeleted { get; set; } = false;
     }
