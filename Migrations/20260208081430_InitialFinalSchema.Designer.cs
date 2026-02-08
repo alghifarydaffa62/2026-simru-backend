@@ -12,8 +12,8 @@ using SimruBackend.Data;
 namespace SimruBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260208020745_SeedPurposeData")]
-    partial class SeedPurposeData
+    [Migration("20260208081430_InitialFinalSchema")]
+    partial class InitialFinalSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -50,9 +50,8 @@ namespace SimruBackend.Migrations
                     b.Property<int>("RoomId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -69,7 +68,7 @@ namespace SimruBackend.Migrations
                             IsDeleted = false,
                             Purpose = "Kebutuhan ruangan himpunan sastra mesin",
                             RoomId = 1,
-                            Status = "Active"
+                            Status = 0
                         });
                 });
 

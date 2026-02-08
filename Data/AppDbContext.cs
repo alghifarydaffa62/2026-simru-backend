@@ -20,7 +20,8 @@ namespace SimruBackend.Data {
                     RoomId = 1,
                     BorrowerName = "Silia Julia",
                     BorrowDate = new DateTime(2026, 2, 7, 9, 0, 0),
-                    Purpose = "Kebutuhan ruangan himpunan sastra mesin"
+                    Purpose = "Kebutuhan ruangan himpunan sastra mesin",
+                    Status = ReservationStatus.Pending
                 }
             );
         }

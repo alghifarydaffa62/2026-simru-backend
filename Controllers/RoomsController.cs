@@ -22,10 +22,28 @@ namespace SimruBackend.Controllers
         }
 
         // GET: api/Rooms
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Room>>> GetRooms()
+        [HttpGet("available")]
+        public async Task<ActionResult> GetAvailableRooms([FromQuery] DateTime? date)
         {
-            return await _context.Rooms.Where(r => !r.IsDeleted).ToListAsync();
+            var targetDate = (date ?? DateTime.Today).Date;
+
+            var roomStatus = await _context.Rooms
+                .Where(r => !r.IsDeleted)
+                .Select(r => new {
+                    r.Id,
+                    r.RoomCode,
+                    r.Name,
+                    r.Capacity,
+                    CurrentReservation = _context.Reservations
+                        .Where(res => res.RoomId == r.Id 
+                                && res.BorrowDate.Date == targetDate 
+                                && res.Status == ReservationStatus.Approved 
+                                && !res.IsDeleted)
+                        .Select(res => new { res.BorrowerName, res.Purpose })
+                        .FirstOrDefault()
+                })
+                .ToListAsync();
+            return Ok(roomStatus);
         }
 
         // GET: api/Rooms/5
