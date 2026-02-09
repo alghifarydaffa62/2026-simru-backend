@@ -25,19 +25,22 @@ namespace SimruBackend.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Reservation>>> GetReservations()
         {
-            return await _context.Reservations.Where(r => !r.IsDeleted).ToListAsync();
+            return await _context.Reservations
+                .Include(res => res.Room) 
+                .Where(res => !res.IsDeleted)
+                .OrderByDescending(res => res.BorrowDate) 
+                .ToListAsync();
         }
 
         // GET: api/Reservations/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Reservation>> GetReservation(int id)
         {
-            var reservation = await _context.Reservations.FindAsync(id);
+            var reservation = await _context.Reservations
+                    .Include(res => res.Room)
+                    .FirstOrDefaultAsync(res => res.Id == id && !res.IsDeleted);
 
-            if (reservation == null)
-            {
-                return NotFound();
-            }
+            if (reservation == null) return NotFound();
 
             return reservation;
         }
@@ -47,9 +50,27 @@ namespace SimruBackend.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutReservation(int id, Reservation reservation)
         {
-            if (id != reservation.Id)
+            if (id != reservation.Id) return BadRequest();
+
+            var existingReservation = await _context.Reservations
+                .AsNoTracking()
+                .FirstOrDefaultAsync(r => r.Id == id);
+
+            if (existingReservation == null) return NotFound();
+
+            if (reservation.Status == ReservationStatus.Approved)
             {
-                return BadRequest();
+                var isConflict = await _context.Reservations.AnyAsync(res =>
+                    res.RoomId == reservation.RoomId &&
+                    res.BorrowDate.Date == reservation.BorrowDate.Date &&
+                    res.Status == ReservationStatus.Approved &&
+                    res.Id != id && 
+                    !res.IsDeleted);
+
+                if (isConflict) 
+                {
+                    return BadRequest("Gagal menyimpan. Ruangan tersebut sudah memiliki jadwal Approved lain di tanggal yang dipilih.");
+                }
             }
 
             _context.Entry(reservation).State = EntityState.Modified;
@@ -60,14 +81,8 @@ namespace SimruBackend.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ReservationExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                if (!ReservationExists(id)) return NotFound();
+                else throw;
             }
 
             return NoContent();
