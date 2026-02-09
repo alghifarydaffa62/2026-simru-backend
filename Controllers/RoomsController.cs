@@ -37,7 +37,7 @@ namespace SimruBackend.Controllers
                     CurrentReservation = _context.Reservations
                         .Where(res => res.RoomId == r.Id 
                                 && res.BorrowDate.Date == targetDate 
-                                && res.Status == ReservationStatus.Approved 
+                                && res.Status == ReservationStatus.Pending 
                                 && !res.IsDeleted)
                         .Select(res => new { res.BorrowerName, res.Purpose })
                         .FirstOrDefault()
