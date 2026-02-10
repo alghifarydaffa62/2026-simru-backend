@@ -21,13 +21,15 @@ namespace SimruBackend.Controllers
             _context = context;
         }
 
-        // GET: api/Reservations
-        [HttpGet]
-        public async Task<ActionResult<IEnumerable<Reservation>>> GetReservations()
+        // GET: api/Reservations/active
+        [HttpGet("active")]
+        public async Task<ActionResult<IEnumerable<Reservation>>> GetActiveReservations()
         {
+            var today = DateTime.Today;
+
             return await _context.Reservations
                 .Include(res => res.Room) 
-                .Where(res => !res.IsDeleted)
+                .Where(res => !res.IsDeleted && res.BorrowDate.Date >= today) 
                 .OrderByDescending(res => res.BorrowDate) 
                 .ToListAsync();
         }
@@ -43,6 +45,19 @@ namespace SimruBackend.Controllers
             if (reservation == null) return NotFound();
 
             return reservation;
+        }
+
+        // GET: api/Reservations/history
+        [HttpGet("history")]
+        public async Task<ActionResult<IEnumerable<Reservation>>> GetHistoryReservations() 
+        {
+            var today = DateTime.Today;
+
+            return await _context.Reservations
+                .Include(res => res.Room)
+                .Where(res => res.IsDeleted || res.BorrowDate.Date < today)
+                .OrderByDescending(res => res.BorrowDate)
+                .ToListAsync();
         }
 
         // PUT: api/Reservations/5
@@ -93,10 +108,18 @@ namespace SimruBackend.Controllers
         [HttpPost]
         public async Task<ActionResult<Reservation>> PostReservation(Reservation reservation)
         {
+            reservation.Status = ReservationStatus.Pending; 
+    
+            reservation.IsDeleted = false;
+
             _context.Reservations.Add(reservation);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetReservation", new { id = reservation.Id }, reservation);
+            var result = await _context.Reservations
+                .Include(r => r.Room)
+                .FirstOrDefaultAsync(r => r.Id == reservation.Id);
+
+            return CreatedAtAction("GetReservation", new { id = reservation.Id }, result);
         }
 
         // DELETE: api/Reservations/5
