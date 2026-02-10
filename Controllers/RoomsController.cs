@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SimruBackend.Data;
 using SimruBackend.Models;
+using SimruBackend.DTO;
 
 namespace SimruBackend.Controllers
 {
@@ -23,41 +24,50 @@ namespace SimruBackend.Controllers
 
         // GET: api/Rooms
         [HttpGet("available")]
-        public async Task<ActionResult> GetAvailableRooms([FromQuery] DateTime? date)
+        public async Task<ActionResult<IEnumerable<RoomResponseDTO>>> GetAvailableRooms([FromQuery] DateTime? date)
         {
             var targetDate = (date ?? DateTime.Today).Date;
 
             var roomStatus = await _context.Rooms
                 .Where(r => !r.IsDeleted)
-                .Select(r => new {
-                    r.Id,
-                    r.RoomCode,
-                    r.Name,
-                    r.Capacity,
+                .Select(r => new RoomResponseDTO {
+                    Id = r.Id,
+                    RoomCode = r.RoomCode,
+                    Name = r.Name,
+                    Capacity = r.Capacity,
                     CurrentReservation = _context.Reservations
                         .Where(res => res.RoomId == r.Id 
                                 && res.BorrowDate.Date == targetDate 
                                 && !res.IsDeleted
                                 && (res.Status == ReservationStatus.Pending || res.Status == ReservationStatus.Approved))
-                        .Select(res => new { res.BorrowerName, res.Purpose })
+                        .Select(res => new CurrentReservationDTO { 
+                            BorrowerName = res.BorrowerName, 
+                            Purpose = res.Purpose 
+                        })
                         .FirstOrDefault()
                 })
                 .ToListAsync();
+
             return Ok(roomStatus);
         }
 
         // GET: api/Rooms/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Room>> GetRoom(int id)
+        public async Task<ActionResult<RoomResponseDTO>> GetRoom(int id)
         {
-            var room = await _context.Rooms.FindAsync(id);
+            var room = await _context.Rooms
+                .Where(r => r.Id == id && !r.IsDeleted)
+                .Select(r => new RoomResponseDTO {
+                    Id = r.Id,
+                    RoomCode = r.RoomCode,
+                    Name = r.Name,
+                    Capacity = r.Capacity
+                })
+                .FirstOrDefaultAsync();
 
-            if (room == null)
-            {
-                return NotFound();
-            }
+            if (room == null) return NotFound();
 
-            return room;
+            return Ok(room);
         }
 
         // PUT: api/Rooms/5
