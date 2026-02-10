@@ -23,15 +23,22 @@ namespace SimruBackend.Controllers
 
         // GET: api/Reservations/active
         [HttpGet("active")]
-        public async Task<ActionResult<IEnumerable<Reservation>>> GetActiveReservations()
+        public async Task<ActionResult<IEnumerable<Reservation>>> GetActiveReservations([FromQuery] string? search)
         {
             var today = DateTime.Today;
 
-            return await _context.Reservations
-                .Include(res => res.Room) 
-                .Where(res => !res.IsDeleted && res.BorrowDate.Date >= today) 
-                .OrderByDescending(res => res.BorrowDate) 
-                .ToListAsync();
+            IQueryable<Reservation> query = _context.Reservations
+            .Include(res => res.Room)
+            .Where(res => !res.IsDeleted && res.BorrowDate.Date >= today);
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(res =>
+                    res.BorrowerName.Contains(search) ||
+                    (res.Room != null && res.Room.Name.Contains(search))); 
+            }
+
+            return await query.OrderBy(res => res.BorrowDate).ToListAsync();
         }
 
         // GET: api/Reservations/5
