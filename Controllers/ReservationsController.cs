@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SimruBackend.Data;
 using SimruBackend.Models;
+using SimruBackend.DTO;
 
 namespace SimruBackend.Controllers
 {
@@ -23,13 +24,13 @@ namespace SimruBackend.Controllers
 
         // GET: api/Reservations/active
         [HttpGet("active")]
-        public async Task<ActionResult<IEnumerable<Reservation>>> GetActiveReservations([FromQuery] string? search)
+        public async Task<ActionResult<IEnumerable<ReservationResponseDTO>>> GetActiveReservations([FromQuery] string? search)
         {
             var today = DateTime.Today;
 
             IQueryable<Reservation> query = _context.Reservations
-            .Include(res => res.Room)
-            .Where(res => !res.IsDeleted && res.BorrowDate.Date >= today);
+                .Include(res => res.Room)
+                .Where(res => !res.IsDeleted && res.BorrowDate.Date >= today);
 
             if (!string.IsNullOrEmpty(search))
             {
@@ -38,7 +39,20 @@ namespace SimruBackend.Controllers
                     (res.Room != null && res.Room.Name.Contains(search))); 
             }
 
-            return await query.OrderBy(res => res.BorrowDate).ToListAsync();
+            var result = await query
+                .OrderBy(res => res.BorrowDate)
+                .Select(res => new ReservationResponseDTO {
+                    Id = res.Id,
+                    RoomId = res.RoomId,
+                    RoomName = res.Room != null ? res.Room.Name : "N/A",
+                    BorrowerName = res.BorrowerName,
+                    BorrowDate = res.BorrowDate,
+                    Purpose = res.Purpose,
+                    Status = (int)res.Status
+                })
+                .ToListAsync();
+
+            return Ok(result);
         }
 
         // GET: api/Reservations/5
@@ -56,7 +70,7 @@ namespace SimruBackend.Controllers
 
         // GET: api/Reservations/history
         [HttpGet("history")]
-        public async Task<ActionResult<IEnumerable<Reservation>>> GetHistoryReservations() 
+        public async Task<ActionResult<IEnumerable<ReservationResponseDTO>>> GetHistoryReservations() 
         {
             var today = DateTime.Today;
 
@@ -64,45 +78,46 @@ namespace SimruBackend.Controllers
                 .Include(res => res.Room)
                 .Where(res => res.IsDeleted || res.BorrowDate.Date < today)
                 .OrderByDescending(res => res.BorrowDate)
+                .Select(res => new ReservationResponseDTO {
+                    Id = res.Id,
+                    RoomId = res.RoomId,
+                    RoomName = res.Room != null ? res.Room.Name : "N/A",
+                    BorrowerName = res.BorrowerName,
+                    BorrowDate = res.BorrowDate,
+                    Purpose = res.Purpose,
+                    Status = (int)res.Status
+                })
                 .ToListAsync();
         }
 
         // PUT: api/Reservations/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutReservation(int id, Reservation reservation)
+        public async Task<IActionResult> PutReservation(int id, ReservationRequestDTO dto)
         {
-            if (id != reservation.Id) return BadRequest();
+            var existingRes = await _context.Reservations.FindAsync(id);
+            if (existingRes == null) return NotFound();
 
-            var existingReservation = await _context.Reservations
-                .AsNoTracking()
-                .FirstOrDefaultAsync(r => r.Id == id);
-
-            if (existingReservation == null) return NotFound();
-
-            if (reservation.Status == ReservationStatus.Approved)
+            if (dto.Status == (int)ReservationStatus.Approved)
             {
                 var isConflict = await _context.Reservations.AnyAsync(res =>
-                    res.RoomId == reservation.RoomId &&
-                    res.BorrowDate.Date == reservation.BorrowDate.Date &&
+                    res.RoomId == dto.RoomId &&
+                    res.BorrowDate.Date == dto.BorrowDate.Date &&
                     res.Status == ReservationStatus.Approved &&
                     res.Id != id && 
                     !res.IsDeleted);
 
-                if (isConflict) 
-                {
-                    return BadRequest("Gagal menyimpan. Ruangan tersebut sudah memiliki jadwal Approved lain di tanggal yang dipilih.");
-                }
+                if (isConflict) return BadRequest("Ruangan sudah di-book oleh orang lain.");
             }
 
-            _context.Entry(reservation).State = EntityState.Modified;
+            existingRes.RoomId = dto.RoomId;
+            existingRes.BorrowerName = dto.BorrowerName;
+            existingRes.BorrowDate = dto.BorrowDate;
+            existingRes.Purpose = dto.Purpose;
+            existingRes.Status = (ReservationStatus)dto.Status;
 
-            try
-            {
+            try {
                 await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
+            } catch (DbUpdateConcurrencyException) {
                 if (!ReservationExists(id)) return NotFound();
                 else throw;
             }
@@ -113,20 +128,35 @@ namespace SimruBackend.Controllers
         // POST: api/Reservations
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Reservation>> PostReservation(Reservation reservation)
+        public async Task<ActionResult<ReservationResponseDTO>> PostReservation(ReservationRequestDTO dto)
         {
-            reservation.Status = ReservationStatus.Pending; 
-    
-            reservation.IsDeleted = false;
+            var reservation = new Reservation {
+                RoomId = dto.RoomId,
+                BorrowerName = dto.BorrowerName,
+                BorrowDate = dto.BorrowDate,
+                Purpose = dto.Purpose,
+                Status = ReservationStatus.Pending, 
+                IsDeleted = false 
+            };
 
             _context.Reservations.Add(reservation);
             await _context.SaveChangesAsync();
 
-            var result = await _context.Reservations
+            var createdRes = await _context.Reservations
                 .Include(r => r.Room)
                 .FirstOrDefaultAsync(r => r.Id == reservation.Id);
 
-            return CreatedAtAction("GetReservation", new { id = reservation.Id }, result);
+            var response = new ReservationResponseDTO {
+                Id = createdRes!.Id,
+                RoomId = createdRes.RoomId,
+                RoomName = createdRes.Room?.Name ?? "N/A",
+                BorrowerName = createdRes.BorrowerName,
+                BorrowDate = createdRes.BorrowDate,
+                Purpose = createdRes.Purpose,
+                Status = (int)createdRes.Status
+            };
+
+            return CreatedAtAction("GetReservation", new { id = response.Id }, response);
         }
 
         // DELETE: api/Reservations/5
